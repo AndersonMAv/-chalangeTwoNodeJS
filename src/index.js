@@ -10,26 +10,56 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const user = users.find(user => user.username === username);
+  if (!user) {
+    return response.status(404).json({ error: "User not found" });
+  }
+  request.user = user;
+  return next();
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+  if (user.todos.length >= 10 && user.pro === false) {
+    return response.status(403).json({ error: "User Already ten todos and not in a pro plan" });
+  } else {
+    return next()
+  }
+
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const { id } = request.params;
+  const user = users.find(user => user.username === username);
+  const isValid = validate(id);
+  if (!user) {
+    return response.status(404).json({ error: "User not found" });
+  } else if (!isValid) {
+    return response.status(400).json({ error: "Id is not Uuid" });
+  } else if (!user.todos.find(todo => todo.id === id)) {
+    return response.status(404).json({ error: "Todo not found" });
+  } else {
+    request.user = user;
+    request.todo = user.todos.find(todo => todo.id === id);
+    return next()
+  }
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+  const user = users.find((user) => user.id === id);
+  if (!user) {
+    return response.status(404).json({ error: "User not found" });
+  }
+  request.user = user;
+  return next()
 }
 
 app.post('/users', (request, response) => {
   const { name, username } = request.body;
-
   const usernameAlreadyExists = users.some((user) => user.username === username);
-
   if (usernameAlreadyExists) {
     return response.status(400).json({ error: 'Username already exists' });
   }
@@ -84,7 +114,6 @@ app.post('/todos', checksExistsUserAccount, checksCreateTodosUserAvailability, (
   };
 
   user.todos.push(newTodo);
-
   return response.status(201).json(newTodo);
 });
 
